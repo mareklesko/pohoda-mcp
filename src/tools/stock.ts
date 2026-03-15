@@ -1,11 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { PohodaClient } from "../client.js";
-import { buildExportRequest, buildImportDoc, type XMLBuilder } from "../xml/builder.js";
+import { buildExportRequest, buildImportDoc } from "../xml/builder.js";
 import { NS } from "../xml/namespaces.js";
 import { parseResponse, extractListData, extractImportResult } from "../xml/parser.js";
 import { ok, err, jsonResult } from "../core/types.js";
 import { applyFilter } from "../core/filters.js";
+import { toIsoDate } from "../core/shared.js";
 
 export function registerStockTools(server: McpServer, client: PohodaClient) {
   server.tool(
@@ -33,7 +34,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
             if (params.code) ftr.ele(NS.ftr, "ftr:code").txt(params.code);
             if (params.name) ftr.ele(NS.ftr, "ftr:name").txt(params.name);
             if (params.store) ftr.ele(NS.ftr, "ftr:store").ele(NS.typ, "typ:ids").txt(params.store);
-            if (params.lastChanges) ftr.ele(NS.ftr, "ftr:lastChanges").txt(params.lastChanges);
+            if (params.lastChanges) ftr.ele(NS.ftr, "ftr:lastChanges").txt(toIsoDate(params.lastChanges));
           },
         );
         const resp = parseResponse(await client.sendXml(xml));

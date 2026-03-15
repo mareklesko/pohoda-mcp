@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { PohodaClient } from "../client.js";
-import { buildExportRequest, buildImportDoc, buildDeleteRequest } from "../xml/builder.js";
+import { buildExportRequest, buildImportDoc } from "../xml/builder.js";
 import { NS } from "../xml/namespaces.js";
 import { parseResponse, extractListData, extractImportResult } from "../xml/parser.js";
 import { ok, err, jsonResult } from "../core/types.js";
@@ -141,13 +141,13 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
     async (args) => {
       try {
         const params = deleteContractParams.parse(args);
-        const xml = buildDeleteRequest(
-          { ico: client.ico },
-          "con:contract",
-          NS.con,
-          "con:contractDesc",
-          { id: params.id }
-        );
+        const xml = buildImportDoc({ ico: client.ico }, (item) => {
+          const con = item.ele(NS.con, "con:contract").att("version", "2.0");
+          const actionType = con.ele(NS.con, "con:actionType");
+          const del = actionType.ele(NS.con, "con:delete");
+          const filter = del.ele(NS.ftr, "ftr:filter");
+          filter.ele(NS.ftr, "ftr:id").txt(String(params.id));
+        });
         const response = await client.sendXml(xml);
         const result = extractImportResult(parseResponse(response));
         return result.success ? ok(`Contract deleted successfully. ${result.message}`) : err(result.message);

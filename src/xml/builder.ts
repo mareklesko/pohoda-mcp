@@ -56,46 +56,4 @@ export function buildImportDoc(
   return dp.end({ prettyPrint: false });
 }
 
-export function buildDeleteRequest(
-  opts: DataPackOptions,
-  docTag: string,
-  docNs: string,
-  headerTag: string,
-  deleteFilter: Record<string, string | number>,
-): string {
-  const dp = createDataPack(opts);
-  const item = addDataPackItem(dp);
-  const doc = item.ele(docNs, docTag).att("version", POHODA_VERSION);
-  doc.ele(docNs, "actionType")
-    .ele(docNs, "delete")
-    .ele(NS.ftr, "ftr:filter");
-  const filter = doc.first()!.first()!.first()!;
-  for (const [k, v] of Object.entries(deleteFilter)) {
-    filter.ele(NS.ftr, `ftr:${k}`).txt(String(v));
-  }
-  return dp.end({ prettyPrint: false });
-}
-
-export function addFilter(parent: XMLBuilder, filters: Record<string, string | number | undefined>): void {
-  const ftr = parent.ele(NS.ftr, "ftr:filter");
-  for (const [key, value] of Object.entries(filters)) {
-    if (value != null && value !== "") {
-      ftr.ele(NS.ftr, `ftr:${key}`).txt(String(value));
-    }
-  }
-}
-
-export function addDateFilter(
-  parent: XMLBuilder,
-  field: string,
-  from?: string,
-  to?: string,
-): void {
-  if (!from && !to) return;
-  const ftr = parent.ele(NS.ftr, "ftr:filter");
-  const df = ftr.ele(NS.ftr, `ftr:${field}`);
-  if (from) df.ele(NS.ftr, "ftr:dateFrom").txt(from);
-  if (to) df.ele(NS.ftr, "ftr:dateTill").txt(to);
-}
-
 export { create, type XMLBuilder };

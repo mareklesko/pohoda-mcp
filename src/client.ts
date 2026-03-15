@@ -1,4 +1,5 @@
-import { gunzipSync } from "node:zlib";
+import { gunzipSync, inflateSync } from "node:zlib";
+import * as path from "node:path";
 import * as iconv from "iconv-lite";
 
 export interface PohodaClientConfig {
@@ -65,7 +66,10 @@ export class PohodaClient {
 
         const rawBuf = Buffer.from(await resp.arrayBuffer());
         const encoding = resp.headers.get("content-encoding");
-        const dataBuf = encoding === "gzip" ? gunzipSync(rawBuf) : rawBuf;
+        const dataBuf =
+          encoding === "gzip" ? gunzipSync(rawBuf) :
+          encoding === "deflate" ? inflateSync(rawBuf) :
+          rawBuf;
 
         const contentType = resp.headers.get("content-type") ?? "";
         if (contentType.includes("Windows-1250") || contentType.includes("windows-1250")) {
@@ -110,7 +114,11 @@ export class PohodaClient {
   }
 
   async downloadFile(filePath: string): Promise<Buffer> {
-    const safePath = filePath.replace(/\.\./g, "").replace(/^\/+/, "");
+    const normalized = path.posix.normalize(filePath).replace(/^\/+/, "");
+    if (normalized.startsWith("..") || path.posix.isAbsolute(normalized)) {
+      throw new Error("Path traversal attempt blocked.");
+    }
+    const safePath = normalized;
     const resp = await fetch(`${this.baseUrl}/documents/${encodeURI(safePath)}`, {
       method: "GET",
       headers: { "STW-Authorization": this.authHeader },

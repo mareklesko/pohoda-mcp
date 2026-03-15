@@ -134,13 +134,13 @@ npm run build
 ### Environment Variables
 
 ```bash
-export POHODA_URL="http://localhost:444"       # Required — mServer URL
-export POHODA_USERNAME="Admin"                 # Required — POHODA user
-export POHODA_PASSWORD="password"              # Required — POHODA password
-export POHODA_ICO="12345678"                   # Required — Company ICO
-export POHODA_TIMEOUT="120000"                 # Optional — Request timeout ms (default: 120s)
-export POHODA_MAX_RETRIES="2"                  # Optional — Max retries on timeout/503
-export POHODA_CHECK_DUPLICITY="true"           # Optional — Enable duplicate import checks
+export POHODA_URL="http://localhost:444"          # Required — mServer URL
+export POHODA_USERNAME="<your-username>"          # Required — POHODA user
+export POHODA_PASSWORD="<your-password>"          # Required — POHODA password
+export POHODA_ICO="<your-company-ico>"            # Required — Company ICO
+export POHODA_TIMEOUT="120000"                    # Optional — Request timeout ms (default: 120s)
+export POHODA_MAX_RETRIES="2"                     # Optional — Max retries on timeout/503
+export POHODA_CHECK_DUPLICITY="true"              # Optional — Enable duplicate import checks
 ```
 
 ## MCP Client Configuration
@@ -153,9 +153,9 @@ export POHODA_CHECK_DUPLICITY="true"           # Optional — Enable duplicate i
       "args": ["/path/to/pohoda-mcp/dist/index.js"],
       "env": {
         "POHODA_URL": "http://localhost:444",
-        "POHODA_USERNAME": "Admin",
-        "POHODA_PASSWORD": "password",
-        "POHODA_ICO": "12345678"
+        "POHODA_USERNAME": "<your-username>",
+        "POHODA_PASSWORD": "<your-password>",
+        "POHODA_ICO": "<your-company-ico>"
       }
     }
   }
@@ -169,9 +169,9 @@ docker build -t pohoda-mcp .
 
 docker run --rm -i \
   -e POHODA_URL=http://host.docker.internal:444 \
-  -e POHODA_USERNAME=Admin \
-  -e POHODA_PASSWORD=password \
-  -e POHODA_ICO=12345678 \
+  -e POHODA_USERNAME=<your-username> \
+  -e POHODA_PASSWORD=<your-password> \
+  -e POHODA_ICO=<your-company-ico> \
   pohoda-mcp
 ```
 
@@ -207,8 +207,8 @@ MCP Client (AI Agent)
 - `STW-Authorization` Basic auth per POHODA mServer specification
 - `STW-Application: pohoda-mcp` header for audit trail in POHODA monitoring
 - `STW-Check-Duplicity` header support to prevent duplicate imports
-- XML string escaping for all user-provided values
-- Path traversal prevention for file downloads (strips `..` from paths)
+- XML escaping handled by xmlbuilder2 for all user-provided values
+- Path traversal prevention for file downloads (normalize + reject `..` prefixed paths)
 - Input validation via Zod on all tool parameters
 
 ## POHODA mServer Setup
