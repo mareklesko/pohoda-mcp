@@ -10,15 +10,6 @@ import { toIsoDate } from "../core/shared.js";
 
 const enquiryTypeEnum = z.enum(["issuedEnquiry", "receivedEnquiry"]);
 
-const listEnquiryParams = z.object({
-  enquiryType: enquiryTypeEnum.optional(),
-  id: z.number().optional(),
-  dateFrom: z.string().optional(),
-  dateTill: z.string().optional(),
-  companyName: z.string().optional(),
-  lastChanges: z.string().optional(),
-});
-
 const enquiryItemSchema = z.object({
   text: z.string(),
   quantity: z.number(),
@@ -27,37 +18,20 @@ const enquiryItemSchema = z.object({
   unit: z.string().optional(),
 });
 
-const createEnquiryParams = z.object({
-  enquiryType: enquiryTypeEnum,
-  date: z.string(),
-  text: z.string().optional(),
-  partnerName: z.string().optional(),
-  Street: z.string().optional(),
-  City: z.string().optional(),
-  Zip: z.string().optional(),
-  Ico: z.string().optional(),
-  note: z.string().optional(),
-  items: z.array(enquiryItemSchema).optional(),
-});
-
 export function registerEnquiryTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_list_enquiries",
+    "List enquiries from POHODA. Supports filtering by enquiry type (issued/received), ID, date range, company name, or last changes. Returns JSON array of matching enquiry records.",
     {
-      description:
-        "List enquiries from POHODA. Supports filtering by enquiry type (issued/received), ID, date range, company name, or last changes. Returns JSON array of matching enquiry records.",
-      inputSchema: {
-        enquiryType: enquiryTypeEnum.optional().describe("Filter by enquiry type (issuedEnquiry or receivedEnquiry)"),
-        id: z.number().optional().describe("Filter by enquiry ID"),
-        dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-        dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-        companyName: z.string().optional().describe("Filter by company name"),
-        lastChanges: z.string().optional().describe("Filter by last changes date"),
-      },
+      enquiryType: enquiryTypeEnum.optional().describe("Filter by enquiry type (issuedEnquiry or receivedEnquiry)"),
+      id: z.number().optional().describe("Filter by enquiry ID"),
+      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
+      companyName: z.string().optional().describe("Filter by company name"),
+      lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = listEnquiryParams.parse(args);
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listEnquiryRequest",
@@ -85,30 +59,26 @@ export function registerEnquiryTools(server: McpServer, client: PohodaClient): v
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_create_enquiry",
+    "Create a new enquiry in POHODA. Requires enquiryType and date. Optional: text, partner details, note, and line items.",
     {
-      description:
-        "Create a new enquiry in POHODA. Requires enquiryType and date. Optional: text, partner details (partnerName, Street, City, Zip, Ico), note, and line items.",
-      inputSchema: {
-        enquiryType: enquiryTypeEnum.describe("Enquiry type: issuedEnquiry or receivedEnquiry (required)"),
-        date: z.string().describe("Enquiry date (DD.MM.YYYY or YYYY-MM-DD)"),
-        text: z.string().optional().describe("Enquiry text/description"),
-        partnerName: z.string().optional().describe("Partner company name"),
-        Street: z.string().optional().describe("Partner street"),
-        City: z.string().optional().describe("Partner city"),
-        Zip: z.string().optional().describe("Partner ZIP code"),
-        Ico: z.string().optional().describe("Partner IČO"),
-        note: z.string().optional().describe("Note"),
-        items: z
-          .array(enquiryItemSchema)
-          .optional()
-          .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit"),
-      },
+      enquiryType: enquiryTypeEnum.describe("Enquiry type: issuedEnquiry or receivedEnquiry (required)"),
+      date: z.string().describe("Enquiry date (DD.MM.YYYY or YYYY-MM-DD)"),
+      text: z.string().optional().describe("Enquiry text/description"),
+      partnerName: z.string().optional().describe("Partner company name"),
+      partnerStreet: z.string().optional().describe("Partner street"),
+      partnerCity: z.string().optional().describe("Partner city"),
+      partnerZip: z.string().optional().describe("Partner ZIP code"),
+      partnerIco: z.string().optional().describe("Partner IČO"),
+      note: z.string().optional().describe("Note"),
+      items: z
+        .array(enquiryItemSchema)
+        .optional()
+        .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = createEnquiryParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const enq = item.ele(NS.enq, "enq:enquiry").att("version", "2.0");
           const header = enq.ele(NS.enq, "enq:enquiryHeader");
@@ -118,15 +88,15 @@ export function registerEnquiryTools(server: McpServer, client: PohodaClient): v
           if (params.text) header.ele(NS.enq, "enq:text").txt(params.text);
 
           const hasPartner =
-            params.partnerName ?? params.Street ?? params.City ?? params.Zip ?? params.Ico;
+            params.partnerName ?? params.partnerStreet ?? params.partnerCity ?? params.partnerZip ?? params.partnerIco;
           if (hasPartner) {
             const identity = header.ele(NS.enq, "enq:partnerIdentity");
             const typAddr = identity.ele(NS.typ, "typ:address");
             if (params.partnerName) typAddr.ele(NS.typ, "typ:name").txt(params.partnerName);
-            if (params.Street) typAddr.ele(NS.typ, "typ:street").txt(params.Street);
-            if (params.City) typAddr.ele(NS.typ, "typ:city").txt(params.City);
-            if (params.Zip) typAddr.ele(NS.typ, "typ:zip").txt(params.Zip);
-            if (params.Ico) typAddr.ele(NS.typ, "typ:ico").txt(params.Ico);
+            if (params.partnerStreet) typAddr.ele(NS.typ, "typ:street").txt(params.partnerStreet);
+            if (params.partnerCity) typAddr.ele(NS.typ, "typ:city").txt(params.partnerCity);
+            if (params.partnerZip) typAddr.ele(NS.typ, "typ:zip").txt(params.partnerZip);
+            if (params.partnerIco) typAddr.ele(NS.typ, "typ:ico").txt(params.partnerIco);
           }
 
           if (params.note) header.ele(NS.enq, "enq:note").txt(params.note);

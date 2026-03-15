@@ -18,17 +18,6 @@ const invoiceTypeEnum = z.enum([
   "commitment",
 ]);
 
-const listInvoiceParams = z.object({
-  invoiceType: invoiceTypeEnum.optional(),
-  id: z.number().optional(),
-  dateFrom: z.string().optional(),
-  dateTill: z.string().optional(),
-  variableSymbol: z.string().optional(),
-  companyName: z.string().optional(),
-  ico: z.string().optional(),
-  lastChanges: z.string().optional(),
-});
-
 const invoiceItemSchema = z.object({
   text: z.string(),
   quantity: z.number(),
@@ -38,51 +27,22 @@ const invoiceItemSchema = z.object({
   code: z.string().optional(),
 });
 
-const createInvoiceParams = z.object({
-  invoiceType: invoiceTypeEnum,
-  date: z.string(),
-  dateTax: z.string().optional(),
-  dateDue: z.string().optional(),
-  dateAccounting: z.string().optional(),
-  text: z.string().optional(),
-  partnerName: z.string().optional(),
-  partnerStreet: z.string().optional(),
-  partnerCity: z.string().optional(),
-  partnerZip: z.string().optional(),
-  partnerIco: z.string().optional(),
-  partnerDic: z.string().optional(),
-  symVar: z.string().optional(),
-  symConst: z.string().optional(),
-  symSpec: z.string().optional(),
-  note: z.string().optional(),
-  intNote: z.string().optional(),
-  items: z.array(invoiceItemSchema).optional(),
-});
-
-const deleteInvoiceParams = z.object({
-  id: z.number(),
-});
-
 export function registerInvoiceTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_list_invoices",
+    "List invoices from POHODA. Supports filtering by invoice type, ID, date range, variable symbol, company name, IČO, or last changes. Returns JSON array of matching invoice records.",
     {
-      description:
-        "List invoices from POHODA. Supports filtering by invoice type, ID, date range, variable symbol, company name, IČO, or last changes. Returns JSON array of matching invoice records.",
-      inputSchema: {
-        invoiceType: invoiceTypeEnum.optional().describe("Filter by invoice type"),
-        id: z.number().optional().describe("Filter by invoice ID"),
-        dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-        dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-        variableSymbol: z.string().optional().describe("Filter by variable symbol"),
-        companyName: z.string().optional().describe("Filter by company name"),
-        ico: z.string().optional().describe("Filter by IČO"),
-        lastChanges: z.string().optional().describe("Filter by last changes date"),
-      },
+      invoiceType: invoiceTypeEnum.optional().describe("Filter by invoice type"),
+      id: z.number().optional().describe("Filter by invoice ID"),
+      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
+      variableSymbol: z.string().optional().describe("Filter by variable symbol"),
+      companyName: z.string().optional().describe("Filter by company name"),
+      ico: z.string().optional().describe("Filter by IČO"),
+      lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = listInvoiceParams.parse(args);
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listInvoiceRequest",
@@ -112,38 +72,34 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_create_invoice",
+    "Create a new invoice in POHODA. Requires invoiceType and date. Optional: dateTax, dateDue, dateAccounting, text, partner details, symbols, note, and line items.",
     {
-      description:
-        "Create a new invoice in POHODA. Requires invoiceType and date. Optional: dateTax, dateDue, dateAccounting, text, partner details, symbols, note, and line items.",
-      inputSchema: {
-        invoiceType: invoiceTypeEnum.describe("Invoice type (required)"),
-        date: z.string().describe("Invoice date (DD.MM.YYYY or YYYY-MM-DD)"),
-        dateTax: z.string().optional().describe("Tax date"),
-        dateDue: z.string().optional().describe("Due date"),
-        dateAccounting: z.string().optional().describe("Accounting date"),
-        text: z.string().optional().describe("Invoice text/description"),
-        partnerName: z.string().optional().describe("Partner company name"),
-        partnerStreet: z.string().optional().describe("Partner street"),
-        partnerCity: z.string().optional().describe("Partner city"),
-        partnerZip: z.string().optional().describe("Partner ZIP code"),
-        partnerIco: z.string().optional().describe("Partner IČO"),
-        partnerDic: z.string().optional().describe("Partner DIČ"),
-        symVar: z.string().optional().describe("Variable symbol"),
-        symConst: z.string().optional().describe("Constant symbol"),
-        symSpec: z.string().optional().describe("Specific symbol"),
-        note: z.string().optional().describe("Note"),
-        intNote: z.string().optional().describe("Internal note"),
-        items: z
-          .array(invoiceItemSchema)
-          .optional()
-          .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit, code"),
-      },
+      invoiceType: invoiceTypeEnum.describe("Invoice type (required)"),
+      date: z.string().describe("Invoice date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTax: z.string().optional().describe("Tax date"),
+      dateDue: z.string().optional().describe("Due date"),
+      dateAccounting: z.string().optional().describe("Accounting date"),
+      text: z.string().optional().describe("Invoice text/description"),
+      partnerName: z.string().optional().describe("Partner company name"),
+      partnerStreet: z.string().optional().describe("Partner street"),
+      partnerCity: z.string().optional().describe("Partner city"),
+      partnerZip: z.string().optional().describe("Partner ZIP code"),
+      partnerIco: z.string().optional().describe("Partner IČO"),
+      partnerDic: z.string().optional().describe("Partner DIČ"),
+      symVar: z.string().optional().describe("Variable symbol"),
+      symConst: z.string().optional().describe("Constant symbol"),
+      symSpec: z.string().optional().describe("Specific symbol"),
+      note: z.string().optional().describe("Note"),
+      intNote: z.string().optional().describe("Internal note"),
+      items: z
+        .array(invoiceItemSchema)
+        .optional()
+        .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit, code"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = createInvoiceParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const inv = item.ele(NS.inv, "inv:invoice").att("version", "2.0");
           const header = inv.ele(NS.inv, "inv:invoiceHeader");
@@ -208,17 +164,14 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_delete_invoice",
+    "Delete an invoice from POHODA by ID. Requires the invoice ID.",
     {
-      description: "Delete an invoice from POHODA by ID. Requires the invoice ID.",
-      inputSchema: {
-        id: z.number().describe("Invoice ID to delete (required)"),
-      },
+      id: z.number().describe("Invoice ID to delete (required)"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = deleteInvoiceParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const inv = item.ele(NS.inv, "inv:invoice").att("version", "2.0");
           const actionType = inv.ele(NS.inv, "inv:actionType");

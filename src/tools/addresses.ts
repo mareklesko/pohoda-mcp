@@ -7,52 +7,19 @@ import { parseResponse, extractListData, extractImportResult } from "../xml/pars
 import { ok, err, jsonResult } from "../core/types.js";
 import { applyFilter, type ListFilterParams } from "../core/filters.js";
 
-const addressListParams = z.object({
-  id: z.number().optional(),
-  companyName: z.string().optional(),
-  ico: z.string().optional(),
-  lastChanges: z.string().optional(),
-  code: z.string().optional(),
-});
-
-const addressCreateParams = z.object({
-  name: z.string(),
-  street: z.string().optional(),
-  city: z.string().optional(),
-  zip: z.string().optional(),
-  ico: z.string().optional(),
-  dic: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  web: z.string().optional(),
-  note: z.string().optional(),
-});
-
-const addressUpdateParams = addressCreateParams.extend({
-  id: z.number(),
-});
-
-const addressDeleteParams = z.object({
-  id: z.number(),
-});
-
 export function registerAddressTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_list_addresses",
+    "List addresses from POHODA addressbook. Supports filtering by id, company name, IČO, last changes date, or code. Returns JSON array of matching address records.",
     {
-      description:
-        "List addresses from POHODA addressbook. Supports filtering by id, company name, IČO, last changes date, or code. Returns JSON array of matching address records.",
-      inputSchema: {
-        id: z.number().optional().describe("Filter by address ID"),
-        companyName: z.string().optional().describe("Filter by company name"),
-        ico: z.string().optional().describe("Filter by IČO (company ID number)"),
-        lastChanges: z.string().optional().describe("Filter by last changes date (DD.MM.YYYY or YYYY-MM-DD)"),
-        code: z.string().optional().describe("Filter by address code"),
-      },
+      id: z.number().optional().describe("Filter by address ID"),
+      companyName: z.string().optional().describe("Filter by company name"),
+      ico: z.string().optional().describe("Filter by IČO (company ID number)"),
+      lastChanges: z.string().optional().describe("Filter by last changes date (DD.MM.YYYY or YYYY-MM-DD)"),
+      code: z.string().optional().describe("Filter by address code"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = addressListParams.parse(args);
         const filterParams: ListFilterParams = {
           id: params.id,
           companyName: params.companyName,
@@ -77,27 +44,23 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_create_address",
+    "Create a new address/contact in POHODA addressbook. Requires name; optional fields: street, city, zip, IČO, DIČ, email, phone, web, note.",
     {
-      description:
-        "Create a new address/contact in POHODA addressbook. Requires name; optional fields: street, city, zip, IČO, DIČ, email, phone, web, note.",
-      inputSchema: {
-        name: z.string().describe("Company or contact name (required)"),
-        street: z.string().optional().describe("Street address"),
-        city: z.string().optional().describe("City"),
-        zip: z.string().optional().describe("ZIP/postal code"),
-        ico: z.string().optional().describe("IČO (company ID number)"),
-        dic: z.string().optional().describe("DIČ (VAT ID)"),
-        email: z.string().optional().describe("Email address"),
-        phone: z.string().optional().describe("Phone number"),
-        web: z.string().optional().describe("Website URL"),
-        note: z.string().optional().describe("Note or comment"),
-      },
+      name: z.string().describe("Company or contact name (required)"),
+      street: z.string().optional().describe("Street address"),
+      city: z.string().optional().describe("City"),
+      zip: z.string().optional().describe("ZIP/postal code"),
+      ico: z.string().optional().describe("IČO (company ID number)"),
+      dic: z.string().optional().describe("DIČ (VAT ID)"),
+      email: z.string().optional().describe("Email address"),
+      phone: z.string().optional().describe("Phone number"),
+      web: z.string().optional().describe("Website URL"),
+      note: z.string().optional().describe("Note or comment"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = addressCreateParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const adb = item.ele(NS.adb, "adb:addressbook").att("version", "2.0");
           const header = adb.ele(NS.adb, "adb:addressbookHeader");
@@ -126,28 +89,24 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_update_address",
+    "Update an existing address in POHODA addressbook by ID. Provide id (required) and any fields to update: name, street, city, zip, ico, dic, email, phone, web, note.",
     {
-      description:
-        "Update an existing address in POHODA addressbook by ID. Provide id (required) and any fields to update: name, street, city, zip, ico, dic, email, phone, web, note.",
-      inputSchema: {
-        id: z.number().describe("Address ID to update (required)"),
-        name: z.string().optional().describe("Company or contact name"),
-        street: z.string().optional().describe("Street address"),
-        city: z.string().optional().describe("City"),
-        zip: z.string().optional().describe("ZIP/postal code"),
-        ico: z.string().optional().describe("IČO (company ID number)"),
-        dic: z.string().optional().describe("DIČ (VAT ID)"),
-        email: z.string().optional().describe("Email address"),
-        phone: z.string().optional().describe("Phone number"),
-        web: z.string().optional().describe("Website URL"),
-        note: z.string().optional().describe("Note or comment"),
-      },
+      id: z.number().describe("Address ID to update (required)"),
+      name: z.string().optional().describe("Company or contact name"),
+      street: z.string().optional().describe("Street address"),
+      city: z.string().optional().describe("City"),
+      zip: z.string().optional().describe("ZIP/postal code"),
+      ico: z.string().optional().describe("IČO (company ID number)"),
+      dic: z.string().optional().describe("DIČ (VAT ID)"),
+      email: z.string().optional().describe("Email address"),
+      phone: z.string().optional().describe("Phone number"),
+      web: z.string().optional().describe("Website URL"),
+      note: z.string().optional().describe("Note or comment"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = addressUpdateParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const adb = item.ele(NS.adb, "adb:addressbook").att("version", "2.0");
           const actionType = adb.ele(NS.adb, "adb:actionType");
@@ -182,17 +141,14 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_delete_address",
+    "Delete an address from POHODA addressbook by ID. Requires the address ID.",
     {
-      description: "Delete an address from POHODA addressbook by ID. Requires the address ID.",
-      inputSchema: {
-        id: z.number().describe("Address ID to delete (required)"),
-      },
+      id: z.number().describe("Address ID to delete (required)"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = addressDeleteParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const adb = item.ele(NS.adb, "adb:addressbook").att("version", "2.0");
           const actionType = adb.ele(NS.adb, "adb:actionType");

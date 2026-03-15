@@ -1,10 +1,10 @@
 # pohoda-mcp
 
-MCP server for **POHODA** (Stormware) accounting software. Full XML API coverage via mServer — **45 tools** across all major agendas with read + write operations.
+MCP server for **POHODA** (Stormware) accounting software. Full XML API coverage via mServer — **48 tools** across all major agendas with read + write operations.
 
 First TypeScript/Node.js client for POHODA's XML API. Communicates via mServer HTTP interface using structured XML DataPack requests.
 
-## Tools (45)
+## Tools (48)
 
 ### System (3)
 | Tool | Description |
@@ -185,7 +185,7 @@ MCP Client (AI Agent)
          │         └─> POST /xml → POHODA mServer
          │              └─> ResponsePack XML
          │                   └─> fast-xml-parser → JSON
-         └─> 45 MCP Tools (15 modules)
+         └─> 48 MCP Tools (15 modules)
 ```
 
 **Communication flow:**

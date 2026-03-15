@@ -10,14 +10,6 @@ import { toIsoDate } from "../core/shared.js";
 
 const voucherTypeEnum = z.enum(["receipt", "expense"]);
 
-const listVouchersParams = z.object({
-  id: z.number().optional(),
-  dateFrom: z.string().optional(),
-  dateTill: z.string().optional(),
-  companyName: z.string().optional(),
-  lastChanges: z.string().optional(),
-});
-
 const voucherItemSchema = z.object({
   text: z.string(),
   quantity: z.number(),
@@ -25,39 +17,19 @@ const voucherItemSchema = z.object({
   rateVAT: z.enum(["none", "low", "high"]),
 });
 
-const createVoucherParams = z.object({
-  voucherType: voucherTypeEnum,
-  cashRegister: z.string().optional(),
-  date: z.string(),
-  text: z.string().optional(),
-  symVar: z.string().optional(),
-  symConst: z.string().optional(),
-  partnerName: z.string().optional(),
-  street: z.string().optional(),
-  city: z.string().optional(),
-  zip: z.string().optional(),
-  ico: z.string().optional(),
-  note: z.string().optional(),
-  items: z.array(voucherItemSchema).optional(),
-});
-
 export function registerVoucherTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_list_vouchers",
+    "List cash vouchers (receipts and expenses) from POHODA. Supports filtering by ID, date range, company name, or last changes. Returns JSON array of matching records.",
     {
-      description:
-        "List cash vouchers (receipts and expenses) from POHODA. Supports filtering by ID, date range, company name, or last changes. Returns JSON array of matching records.",
-      inputSchema: {
-        id: z.number().optional().describe("Filter by voucher ID"),
-        dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-        dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-        companyName: z.string().optional().describe("Filter by company name"),
-        lastChanges: z.string().optional().describe("Filter by last changes date"),
-      },
+      id: z.number().optional().describe("Filter by voucher ID"),
+      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
+      companyName: z.string().optional().describe("Filter by company name"),
+      lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = listVouchersParams.parse(args);
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listCashRequest",
@@ -75,33 +47,29 @@ export function registerVoucherTools(server: McpServer, client: PohodaClient): v
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_create_voucher",
+    "Create a cash voucher (receipt or expense) in POHODA. Requires voucherType and date. Optional: cashRegister, text, symbols, partner details, note, and line items.",
     {
-      description:
-        "Create a cash voucher (receipt or expense) in POHODA. Requires voucherType and date. Optional: cashRegister, text, symbols, partner details, note, and line items.",
-      inputSchema: {
-        voucherType: voucherTypeEnum.describe("Voucher type: receipt or expense (required)"),
-        cashRegister: z.string().optional().describe("Cash register identifier"),
-        date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
-        text: z.string().optional().describe("Document text/description"),
-        symVar: z.string().optional().describe("Variable symbol"),
-        symConst: z.string().optional().describe("Constant symbol"),
-        partnerName: z.string().optional().describe("Partner company name"),
-        street: z.string().optional().describe("Partner street"),
-        city: z.string().optional().describe("Partner city"),
-        zip: z.string().optional().describe("Partner ZIP code"),
-        ico: z.string().optional().describe("Partner IČO"),
-        note: z.string().optional().describe("Note"),
-        items: z
-          .array(voucherItemSchema)
-          .optional()
-          .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
-      },
+      voucherType: voucherTypeEnum.describe("Voucher type: receipt or expense (required)"),
+      cashRegister: z.string().optional().describe("Cash register identifier"),
+      date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
+      text: z.string().optional().describe("Document text/description"),
+      symVar: z.string().optional().describe("Variable symbol"),
+      symConst: z.string().optional().describe("Constant symbol"),
+      partnerName: z.string().optional().describe("Partner company name"),
+      partnerStreet: z.string().optional().describe("Partner street"),
+      partnerCity: z.string().optional().describe("Partner city"),
+      partnerZip: z.string().optional().describe("Partner ZIP code"),
+      partnerIco: z.string().optional().describe("Partner IČO"),
+      note: z.string().optional().describe("Note"),
+      items: z
+        .array(voucherItemSchema)
+        .optional()
+        .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = createVoucherParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const vch = item.ele(NS.vch, "vch:voucher").att("version", "2.0");
           const header = vch.ele(NS.vch, "vch:voucherHeader");
@@ -116,15 +84,15 @@ export function registerVoucherTools(server: McpServer, client: PohodaClient): v
           if (params.symConst) header.ele(NS.vch, "vch:symConst").txt(params.symConst);
 
           const hasPartner =
-            params.partnerName ?? params.street ?? params.city ?? params.zip ?? params.ico;
+            params.partnerName ?? params.partnerStreet ?? params.partnerCity ?? params.partnerZip ?? params.partnerIco;
           if (hasPartner) {
             const identity = header.ele(NS.vch, "vch:partnerIdentity");
             const typAddr = identity.ele(NS.typ, "typ:address");
             if (params.partnerName) typAddr.ele(NS.typ, "typ:name").txt(params.partnerName);
-            if (params.street) typAddr.ele(NS.typ, "typ:street").txt(params.street);
-            if (params.city) typAddr.ele(NS.typ, "typ:city").txt(params.city);
-            if (params.zip) typAddr.ele(NS.typ, "typ:zip").txt(params.zip);
-            if (params.ico) typAddr.ele(NS.typ, "typ:ico").txt(params.ico);
+            if (params.partnerStreet) typAddr.ele(NS.typ, "typ:street").txt(params.partnerStreet);
+            if (params.partnerCity) typAddr.ele(NS.typ, "typ:city").txt(params.partnerCity);
+            if (params.partnerZip) typAddr.ele(NS.typ, "typ:zip").txt(params.partnerZip);
+            if (params.partnerIco) typAddr.ele(NS.typ, "typ:ico").txt(params.partnerIco);
           }
 
           if (params.note) header.ele(NS.vch, "vch:note").txt(params.note);

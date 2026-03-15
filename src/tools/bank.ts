@@ -10,14 +10,6 @@ import { toIsoDate } from "../core/shared.js";
 
 const bankTypeEnum = z.enum(["receipt", "expense"]);
 
-const listBankParams = z.object({
-  id: z.number().optional(),
-  dateFrom: z.string().optional(),
-  dateTill: z.string().optional(),
-  companyName: z.string().optional(),
-  lastChanges: z.string().optional(),
-});
-
 const bankItemSchema = z.object({
   text: z.string(),
   quantity: z.number(),
@@ -25,41 +17,19 @@ const bankItemSchema = z.object({
   rateVAT: z.enum(["none", "low", "high"]),
 });
 
-const createBankParams = z.object({
-  bankType: bankTypeEnum,
-  date: z.string(),
-  text: z.string().optional(),
-  account: z.string().optional(),
-  bankCode: z.string().optional(),
-  symVar: z.string().optional(),
-  symConst: z.string().optional(),
-  symSpec: z.string().optional(),
-  partnerName: z.string().optional(),
-  street: z.string().optional(),
-  city: z.string().optional(),
-  zip: z.string().optional(),
-  ico: z.string().optional(),
-  note: z.string().optional(),
-  items: z.array(bankItemSchema).optional(),
-});
-
 export function registerBankTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_list_bank",
+    "List bank documents (receipts and expenses) from POHODA. Supports filtering by ID, date range, company name, or last changes. Returns JSON array of matching records.",
     {
-      description:
-        "List bank documents (receipts and expenses) from POHODA. Supports filtering by ID, date range, company name, or last changes. Returns JSON array of matching records.",
-      inputSchema: {
-        id: z.number().optional().describe("Filter by bank document ID"),
-        dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-        dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-        companyName: z.string().optional().describe("Filter by company name"),
-        lastChanges: z.string().optional().describe("Filter by last changes date"),
-      },
+      id: z.number().optional().describe("Filter by bank document ID"),
+      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
+      companyName: z.string().optional().describe("Filter by company name"),
+      lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = listBankParams.parse(args);
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listBankRequest",
@@ -77,35 +47,31 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_create_bank",
+    "Create a bank document (receipt or expense) in POHODA. Requires bankType and date. Optional: text, account, bankCode, symbols, partner details, note, and line items.",
     {
-      description:
-        "Create a bank document (receipt or expense) in POHODA. Requires bankType and date. Optional: text, account, bankCode, symbols, partner details, note, and line items.",
-      inputSchema: {
-        bankType: bankTypeEnum.describe("Bank document type: receipt or expense (required)"),
-        date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
-        text: z.string().optional().describe("Document text/description"),
-        account: z.string().optional().describe("Bank account identifier"),
-        bankCode: z.string().optional().describe("Bank code"),
-        symVar: z.string().optional().describe("Variable symbol"),
-        symConst: z.string().optional().describe("Constant symbol"),
-        symSpec: z.string().optional().describe("Specific symbol"),
-        partnerName: z.string().optional().describe("Partner company name"),
-        street: z.string().optional().describe("Partner street"),
-        city: z.string().optional().describe("Partner city"),
-        zip: z.string().optional().describe("Partner ZIP code"),
-        ico: z.string().optional().describe("Partner IČO"),
-        note: z.string().optional().describe("Note"),
-        items: z
-          .array(bankItemSchema)
-          .optional()
-          .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
-      },
+      bankType: bankTypeEnum.describe("Bank document type: receipt or expense (required)"),
+      date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
+      text: z.string().optional().describe("Document text/description"),
+      account: z.string().optional().describe("Bank account identifier"),
+      bankCode: z.string().optional().describe("Bank code"),
+      symVar: z.string().optional().describe("Variable symbol"),
+      symConst: z.string().optional().describe("Constant symbol"),
+      symSpec: z.string().optional().describe("Specific symbol"),
+      partnerName: z.string().optional().describe("Partner company name"),
+      partnerStreet: z.string().optional().describe("Partner street"),
+      partnerCity: z.string().optional().describe("Partner city"),
+      partnerZip: z.string().optional().describe("Partner ZIP code"),
+      partnerIco: z.string().optional().describe("Partner IČO"),
+      note: z.string().optional().describe("Note"),
+      items: z
+        .array(bankItemSchema)
+        .optional()
+        .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = createBankParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const bank = item.ele(NS.bnk, "bnk:bank").att("version", "2.0");
           const header = bank.ele(NS.bnk, "bnk:bankHeader");
@@ -122,15 +88,15 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
           if (params.symSpec) header.ele(NS.bnk, "bnk:symSpec").txt(params.symSpec);
 
           const hasPartner =
-            params.partnerName ?? params.street ?? params.city ?? params.zip ?? params.ico;
+            params.partnerName ?? params.partnerStreet ?? params.partnerCity ?? params.partnerZip ?? params.partnerIco;
           if (hasPartner) {
             const identity = header.ele(NS.bnk, "bnk:partnerIdentity");
             const typAddr = identity.ele(NS.typ, "typ:address");
             if (params.partnerName) typAddr.ele(NS.typ, "typ:name").txt(params.partnerName);
-            if (params.street) typAddr.ele(NS.typ, "typ:street").txt(params.street);
-            if (params.city) typAddr.ele(NS.typ, "typ:city").txt(params.city);
-            if (params.zip) typAddr.ele(NS.typ, "typ:zip").txt(params.zip);
-            if (params.ico) typAddr.ele(NS.typ, "typ:ico").txt(params.ico);
+            if (params.partnerStreet) typAddr.ele(NS.typ, "typ:street").txt(params.partnerStreet);
+            if (params.partnerCity) typAddr.ele(NS.typ, "typ:city").txt(params.partnerCity);
+            if (params.partnerZip) typAddr.ele(NS.typ, "typ:zip").txt(params.partnerZip);
+            if (params.partnerIco) typAddr.ele(NS.typ, "typ:ico").txt(params.partnerIco);
           }
 
           if (params.note) header.ele(NS.bnk, "bnk:note").txt(params.note);

@@ -38,13 +38,10 @@ function parseCompanyInfoXml(xml: string): {
 }
 
 export function registerSystemTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_status",
-    {
-      description:
-        "Get POHODA mServer status: processing queue count, server state (idle/working), and server address. Use to check if the server is ready to accept requests.",
-      inputSchema: {},
-    },
+    "Get POHODA mServer status: processing queue count, server state (idle/working), and server address. Use to check if the server is ready to accept requests.",
+    {},
     async () => {
       try {
         const xml = await client.getStatus();
@@ -61,13 +58,10 @@ export function registerSystemTools(server: McpServer, client: PohodaClient): vo
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_company_info",
-    {
-      description:
-        "Get POHODA company/accounting unit info: company name, database name, accounting period, and year. Requires authenticated connection.",
-      inputSchema: {},
-    },
+    "Get POHODA company/accounting unit info: company name, database name, accounting period, and year. Requires authenticated connection.",
+    {},
     async () => {
       try {
         const xml = await client.getCompanyInfo();
@@ -84,14 +78,11 @@ export function registerSystemTools(server: McpServer, client: PohodaClient): vo
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_download_file",
+    "Download a file from POHODA documents storage. Returns file size and base64 content for files under 100KB; for larger files returns size info only. Path is relative to documents root.",
     {
-      description:
-        "Download a file from POHODA documents storage. Returns file size and base64 content for files under 100KB; for larger files returns size info only. Path is relative to documents root.",
-      inputSchema: {
-        filePath: z.string().describe("Relative path to the file in POHODA documents storage"),
-      },
+      filePath: z.string().describe("Relative path to the file in POHODA documents storage"),
     },
     async ({ filePath }) => {
       try {

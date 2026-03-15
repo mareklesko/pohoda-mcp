@@ -8,13 +8,6 @@ import { ok, err, jsonResult } from "../core/types.js";
 import { applyFilter } from "../core/filters.js";
 import { toIsoDate } from "../core/shared.js";
 
-const listInternalDocsParams = z.object({
-  id: z.number().optional(),
-  dateFrom: z.string().optional(),
-  dateTill: z.string().optional(),
-  lastChanges: z.string().optional(),
-});
-
 const intDocItemSchema = z.object({
   text: z.string(),
   quantity: z.number(),
@@ -22,30 +15,18 @@ const intDocItemSchema = z.object({
   rateVAT: z.enum(["none", "low", "high"]),
 });
 
-const createInternalDocParams = z.object({
-  date: z.string(),
-  text: z.string().optional(),
-  symVar: z.string().optional(),
-  note: z.string().optional(),
-  items: z.array(intDocItemSchema).optional(),
-});
-
 export function registerInternalDocTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_list_internal_docs",
+    "List internal documents from POHODA. Supports filtering by ID, date range, or last changes. Returns JSON array of matching records.",
     {
-      description:
-        "List internal documents from POHODA. Supports filtering by ID, date range, or last changes. Returns JSON array of matching records.",
-      inputSchema: {
-        id: z.number().optional().describe("Filter by internal document ID"),
-        dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-        dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-        lastChanges: z.string().optional().describe("Filter by last changes date"),
-      },
+      id: z.number().optional().describe("Filter by internal document ID"),
+      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
+      lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = listInternalDocsParams.parse(args);
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listIntDocRequest",
@@ -63,25 +44,21 @@ export function registerInternalDocTools(server: McpServer, client: PohodaClient
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_create_internal_doc",
+    "Create an internal document in POHODA. Requires date. Optional: text, variable symbol, note, and line items.",
     {
-      description:
-        "Create an internal document in POHODA. Requires date. Optional: text, variable symbol, note, and line items.",
-      inputSchema: {
-        date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
-        text: z.string().optional().describe("Document text/description"),
-        symVar: z.string().optional().describe("Variable symbol"),
-        note: z.string().optional().describe("Note"),
-        items: z
-          .array(intDocItemSchema)
-          .optional()
-          .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
-      },
+      date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
+      text: z.string().optional().describe("Document text/description"),
+      symVar: z.string().optional().describe("Variable symbol"),
+      note: z.string().optional().describe("Note"),
+      items: z
+        .array(intDocItemSchema)
+        .optional()
+        .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = createInternalDocParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const intDoc = item.ele(NS.int, "int:intDoc").att("version", "2.0");
           const header = intDoc.ele(NS.int, "int:intDocHeader");

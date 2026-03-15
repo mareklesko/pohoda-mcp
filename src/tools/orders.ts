@@ -10,16 +10,6 @@ import { toIsoDate } from "../core/shared.js";
 
 const orderTypeEnum = z.enum(["issuedOrder", "receivedOrder"]);
 
-const listOrderParams = z.object({
-  orderType: orderTypeEnum.optional(),
-  id: z.number().optional(),
-  dateFrom: z.string().optional(),
-  dateTill: z.string().optional(),
-  companyName: z.string().optional(),
-  numberOrder: z.string().optional(),
-  lastChanges: z.string().optional(),
-});
-
 const orderItemSchema = z.object({
   text: z.string(),
   quantity: z.number(),
@@ -27,25 +17,6 @@ const orderItemSchema = z.object({
   rateVAT: z.enum(["none", "low", "high"]),
   unit: z.string().optional(),
   code: z.string().optional(),
-});
-
-const createOrderParams = z.object({
-  orderType: orderTypeEnum,
-  date: z.string(),
-  numberOrder: z.string().optional(),
-  text: z.string().optional(),
-  partnerName: z.string().optional(),
-  partnerStreet: z.string().optional(),
-  partnerCity: z.string().optional(),
-  partnerZip: z.string().optional(),
-  partnerIco: z.string().optional(),
-  partnerDic: z.string().optional(),
-  note: z.string().optional(),
-  items: z.array(orderItemSchema).optional(),
-});
-
-const deleteOrderParams = z.object({
-  id: z.number(),
 });
 
 function applyOrderFilter(parent: XMLBuilder, params: ListFilterParams & { numberOrder?: string }): void {
@@ -62,24 +33,20 @@ function applyOrderFilter(parent: XMLBuilder, params: ListFilterParams & { numbe
 }
 
 export function registerOrderTools(server: McpServer, client: PohodaClient): void {
-  server.registerTool(
+  server.tool(
     "pohoda_list_orders",
+    "List orders from POHODA. Supports filtering by order type, ID, date range, company name, order number, or last changes. Returns JSON array of matching order records.",
     {
-      description:
-        "List orders from POHODA. Supports filtering by order type, ID, date range, company name, order number, or last changes. Returns JSON array of matching order records.",
-      inputSchema: {
-        orderType: orderTypeEnum.optional().describe("Filter by order type (issuedOrder or receivedOrder)"),
-        id: z.number().optional().describe("Filter by order ID"),
-        dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-        dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-        companyName: z.string().optional().describe("Filter by company name"),
-        numberOrder: z.string().optional().describe("Filter by order number"),
-        lastChanges: z.string().optional().describe("Filter by last changes date"),
-      },
+      orderType: orderTypeEnum.optional().describe("Filter by order type (issuedOrder or receivedOrder)"),
+      id: z.number().optional().describe("Filter by order ID"),
+      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
+      companyName: z.string().optional().describe("Filter by company name"),
+      numberOrder: z.string().optional().describe("Filter by order number"),
+      lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = listOrderParams.parse(args);
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listOrderRequest",
@@ -87,15 +54,14 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
           "lst:requestOrder",
           (req) => {
             if (params.orderType) req.att("orderType", params.orderType);
-            const filterParams: ListFilterParams & { numberOrder?: string } = {
+            applyOrderFilter(req, {
               id: params.id,
               dateFrom: params.dateFrom,
               dateTill: params.dateTill,
               companyName: params.companyName,
               numberOrder: params.numberOrder,
               lastChanges: params.lastChanges,
-            };
-            applyOrderFilter(req, filterParams);
+            });
           }
         );
         const response = await client.sendXml(xml);
@@ -108,32 +74,28 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_create_order",
+    "Create a new order in POHODA. Requires orderType and date. Optional: numberOrder, text, partner details, note, and line items.",
     {
-      description:
-        "Create a new order in POHODA. Requires orderType and date. Optional: numberOrder, text, partner details, note, and line items.",
-      inputSchema: {
-        orderType: orderTypeEnum.describe("Order type: issuedOrder or receivedOrder (required)"),
-        date: z.string().describe("Order date (DD.MM.YYYY or YYYY-MM-DD)"),
-        numberOrder: z.string().optional().describe("Order number"),
-        text: z.string().optional().describe("Order text/description"),
-        partnerName: z.string().optional().describe("Partner company name"),
-        partnerStreet: z.string().optional().describe("Partner street"),
-        partnerCity: z.string().optional().describe("Partner city"),
-        partnerZip: z.string().optional().describe("Partner ZIP code"),
-        partnerIco: z.string().optional().describe("Partner IČO"),
-        partnerDic: z.string().optional().describe("Partner DIČ"),
-        note: z.string().optional().describe("Note"),
-        items: z
-          .array(orderItemSchema)
-          .optional()
-          .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit, code"),
-      },
+      orderType: orderTypeEnum.describe("Order type: issuedOrder or receivedOrder (required)"),
+      date: z.string().describe("Order date (DD.MM.YYYY or YYYY-MM-DD)"),
+      numberOrder: z.string().optional().describe("Order number"),
+      text: z.string().optional().describe("Order text/description"),
+      partnerName: z.string().optional().describe("Partner company name"),
+      partnerStreet: z.string().optional().describe("Partner street"),
+      partnerCity: z.string().optional().describe("Partner city"),
+      partnerZip: z.string().optional().describe("Partner ZIP code"),
+      partnerIco: z.string().optional().describe("Partner IČO"),
+      partnerDic: z.string().optional().describe("Partner DIČ"),
+      note: z.string().optional().describe("Note"),
+      items: z
+        .array(orderItemSchema)
+        .optional()
+        .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit, code"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = createOrderParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const ord = item.ele(NS.ord, "ord:order").att("version", "2.0");
           const header = ord.ele(NS.ord, "ord:orderHeader");
@@ -192,17 +154,14 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
     }
   );
 
-  server.registerTool(
+  server.tool(
     "pohoda_delete_order",
+    "Delete an order from POHODA by ID. Requires the order ID.",
     {
-      description: "Delete an order from POHODA by ID. Requires the order ID.",
-      inputSchema: {
-        id: z.number().describe("Order ID to delete (required)"),
-      },
+      id: z.number().describe("Order ID to delete (required)"),
     },
-    async (args) => {
+    async (params) => {
       try {
-        const params = deleteOrderParams.parse(args);
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const ord = item.ele(NS.ord, "ord:order").att("version", "2.0");
           const actionType = ord.ele(NS.ord, "ord:actionType");

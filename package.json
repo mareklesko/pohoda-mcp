@@ -1,9 +1,17 @@
 {
   "name": "pohoda-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for POHODA accounting software — full XML API coverage via mServer",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "pohoda-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "license": "MIT",
   "author": "hlebtkachenko",
   "repository": {
@@ -11,6 +19,9 @@
     "url": "https://github.com/hlebtkachenko/pohoda-mcp.git"
   },
   "homepage": "https://github.com/hlebtkachenko/pohoda-mcp",
+  "bugs": {
+    "url": "https://github.com/hlebtkachenko/pohoda-mcp/issues"
+  },
   "keywords": ["pohoda", "stormware", "accounting", "mcp", "xml-api", "mserver"],
   "engines": { "node": ">=20" },
   "scripts": {
