@@ -52,10 +52,10 @@ export function registerVoucherTools(server: McpServer, client: PohodaClient): v
 
   server.tool(
     "pohoda_create_voucher",
-    "Create a cash voucher (receipt or expense) in POHODA. Requires voucherType and date. Optional: cashRegister, text, symbols, partner details, note, and line items.",
+    "Create a cash voucher (receipt or expense) in POHODA. Requires voucherType and date. Optional: cashAccount, text, symbols, partner details, note, and line items.",
     {
       voucherType: voucherTypeEnum.describe("Voucher type: receipt or expense (required)"),
-      cashRegister: z.string().optional().describe("Cash register identifier"),
+      cashAccount: z.string().optional().describe("Cash account identifier"),
       date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
       text: z.string().optional().describe("Document text/description"),
       symPar: z.string().optional().describe("Pairing symbol"),
@@ -77,8 +77,8 @@ export function registerVoucherTools(server: McpServer, client: PohodaClient): v
           const header = vch.ele(NS.vch, "vch:voucherHeader");
 
           header.ele(NS.vch, "vch:voucherType").txt(params.voucherType);
-          if (params.cashRegister) {
-            header.ele(NS.vch, "vch:cashAccount").ele(NS.typ, "typ:ids").txt(params.cashRegister);
+          if (params.cashAccount) {
+            header.ele(NS.vch, "vch:cashAccount").ele(NS.typ, "typ:ids").txt(params.cashAccount);
           }
           header.ele(NS.vch, "vch:date").txt(toIsoDate(params.date));
           if (params.text) header.ele(NS.vch, "vch:text").txt(params.text);

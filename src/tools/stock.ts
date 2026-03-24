@@ -101,7 +101,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
       unit: z.string().optional().describe("New unit"),
       purchasingPrice: z.number().optional().describe("New purchasing price"),
       sellingPrice: z.number().optional().describe("New selling price"),
-      rateVAT: z.enum(["none", "low", "high"]).optional().describe("New VAT rate for selling price"),
+      sellingRateVAT: z.enum(["none", "low", "high"]).optional().describe("New VAT rate for selling price"),
       note: z.string().optional().describe("New note"),
     },
     async (params) => {
@@ -118,7 +118,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
           if (params.unit) hdr.ele(NS.stk, "stk:unit").txt(params.unit);
           if (params.purchasingPrice != null) hdr.ele(NS.stk, "stk:purchasingPrice").txt(String(params.purchasingPrice));
           if (params.sellingPrice != null) hdr.ele(NS.stk, "stk:sellingPrice").txt(String(params.sellingPrice));
-          if (params.rateVAT) hdr.ele(NS.stk, "stk:sellingRateVAT").txt(params.rateVAT);
+          if (params.sellingRateVAT) hdr.ele(NS.stk, "stk:sellingRateVAT").txt(params.sellingRateVAT);
           if (params.note) hdr.ele(NS.stk, "stk:note").txt(params.note);
         });
         const resp = parseResponse(await client.sendXml(xml));

@@ -4,7 +4,6 @@ import { toIsoDate } from "./shared.js";
 
 export interface ListFilterParams {
   id?: number;
-  code?: string;
   dateFrom?: string;
   dateTill?: string;
   lastChanges?: string;

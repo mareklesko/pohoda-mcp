@@ -34,7 +34,7 @@ function applyOrderFilter(parent: XMLBuilder, params: ListFilterParams): void {
 export function registerOrderTools(server: McpServer, client: PohodaClient): void {
   server.tool(
     "pohoda_list_orders",
-    "List orders from POHODA. Supports filtering by order type, ID, date range, company name, order number, or last changes. Returns JSON array of matching order records.",
+    "List orders from POHODA. Supports filtering by order type, ID, date range, company name, or last changes. Returns JSON array of matching order records.",
     {
       orderType: orderTypeEnum.optional().describe("Filter by order type (issuedOrder or receivedOrder)"),
       id: z.number().optional().describe("Filter by order ID"),
