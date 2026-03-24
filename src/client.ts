@@ -1,4 +1,4 @@
-import { gunzipSync, inflateSync } from "node:zlib";
+import { gunzipSync, inflateSync, inflateRawSync } from "node:zlib";
 import * as path from "node:path";
 import iconv from "iconv-lite";
 
@@ -42,7 +42,7 @@ export class PohodaClient {
           headers: {
             "Content-Type": "text/xml",
             "STW-Authorization": this.authHeader,
-            "Accept-Encoding": "gzip, deflate",
+            "Accept-Encoding": "gzip",
             "STW-Application": "pohoda-mcp",
             "STW-Instance": `mcp-${Date.now()}`,
             ...(this.checkDuplicity ? { "STW-Check-Duplicity": "true" } : {}),
@@ -68,7 +68,7 @@ export class PohodaClient {
         const encoding = resp.headers.get("content-encoding");
         const dataBuf =
           encoding === "gzip" ? gunzipSync(rawBuf) :
-          encoding === "deflate" ? inflateSync(rawBuf) :
+          encoding === "deflate" ? safeInflate(rawBuf) :
           rawBuf;
 
         const contentType = resp.headers.get("content-type") ?? "";
@@ -131,4 +131,8 @@ export class PohodaClient {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function safeInflate(buf: Buffer): Buffer {
+  try { return inflateSync(buf); } catch { return inflateRawSync(buf); }
 }
