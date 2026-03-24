@@ -26,7 +26,8 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
           "lst:listContractRequest",
           NS.lCon,
           "lst:requestContract",
-          (req) => {
+          (req, listReq) => {
+            listReq.att("contractVersion", "2.0");
             const filterParams: ListFilterParams = {
               id: params.id,
               dateFrom: params.dateFrom,
@@ -52,7 +53,7 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
     "Create a new contract in POHODA. Optional: number, datePlan, text, partner details, note.",
     {
       number: z.string().optional().describe("Contract number"),
-      datePlan: z.string().optional().describe("Planned date (DD.MM.YYYY or YYYY-MM-DD)"),
+      datePlanDelivery: z.string().optional().describe("Planned delivery date (DD.MM.YYYY or YYYY-MM-DD)"),
       text: z.string().optional().describe("Contract text/description"),
       partnerName: z.string().optional().describe("Partner company name"),
       partnerStreet: z.string().optional().describe("Partner street"),
@@ -68,7 +69,7 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
           const desc = con.ele(NS.con, "con:contractDesc");
 
           if (params.number) desc.ele(NS.con, "con:number").txt(params.number);
-          if (params.datePlan) desc.ele(NS.con, "con:datePlan").txt(toIsoDate(params.datePlan));
+          if (params.datePlanDelivery) desc.ele(NS.con, "con:datePlanDelivery").txt(toIsoDate(params.datePlanDelivery));
           if (params.text) desc.ele(NS.con, "con:text").txt(params.text);
 
           const hasPartner =

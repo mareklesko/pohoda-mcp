@@ -30,13 +30,12 @@ const invoiceItemSchema = z.object({
 export function registerInvoiceTools(server: McpServer, client: PohodaClient): void {
   server.tool(
     "pohoda_list_invoices",
-    "List invoices from POHODA. Supports filtering by invoice type, ID, date range, variable symbol, company name, IČO, or last changes. Returns JSON array of matching invoice records.",
+    "List invoices from POHODA. Supports filtering by invoice type, ID, date range, company name, IČO, or last changes. Returns JSON array of matching invoice records.",
     {
       invoiceType: invoiceTypeEnum.optional().describe("Filter by invoice type"),
       id: z.number().optional().describe("Filter by invoice ID"),
       dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
       dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-      variableSymbol: z.string().optional().describe("Filter by variable symbol"),
       companyName: z.string().optional().describe("Filter by company name"),
       ico: z.string().optional().describe("Filter by IČO"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
@@ -48,14 +47,13 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
           "lst:listInvoiceRequest",
           NS.lst,
           "lst:requestInvoice",
-          (req) => {
-            if (params.invoiceType) req.att("invoiceType", params.invoiceType);
+          (req, listReq) => {
+            listReq.att("invoiceVersion", "2.0");
+            if (params.invoiceType) listReq.att("invoiceType", params.invoiceType);
             const filterParams: InvoiceFilterParams = {
               id: params.id,
-              invoiceType: params.invoiceType,
               dateFrom: params.dateFrom,
               dateTill: params.dateTill,
-              variableSymbol: params.variableSymbol,
               companyName: params.companyName,
               ico: params.ico,
               lastChanges: params.lastChanges,

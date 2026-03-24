@@ -5,7 +5,7 @@ import { buildExportRequest, buildImportDoc } from "../xml/builder.js";
 import { NS } from "../xml/namespaces.js";
 import { parseResponse, extractListData, extractImportResult } from "../xml/parser.js";
 import { ok, err, jsonResult } from "../core/types.js";
-import { applyFilter, type ListFilterParams } from "../core/filters.js";
+import { applyAddressFilter, type AddressFilterParams } from "../core/filters.js";
 
 export function registerAddressTools(server: McpServer, client: PohodaClient): void {
   server.tool(
@@ -20,7 +20,7 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
     },
     async (params) => {
       try {
-        const filterParams: ListFilterParams = {
+        const filterParams: AddressFilterParams = {
           id: params.id,
           companyName: params.companyName,
           ico: params.ico,
@@ -32,7 +32,10 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
           "lst:listAddressBookRequest",
           NS.lAdb,
           "lst:requestAddressBook",
-          (req) => applyFilter(req, filterParams)
+          (req, listReq) => {
+            listReq.att("addressBookVersion", "2.0");
+            applyAddressFilter(req, filterParams);
+          }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -64,7 +67,6 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const adb = item.ele(NS.adb, "adb:addressbook").att("version", "2.0");
           const header = adb.ele(NS.adb, "adb:addressbookHeader");
-          header.ele(NS.adb, "adb:addressbookType").txt("company");
           const identity = header.ele(NS.adb, "adb:identity");
           const typAddr = identity.ele(NS.typ, "typ:address");
           typAddr.ele(NS.typ, "typ:name").txt(params.name);
@@ -117,7 +119,6 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
           const hasIdentity =
             params.name ?? params.street ?? params.city ?? params.zip ?? params.ico ?? params.dic;
           if (hasIdentity) {
-            header.ele(NS.adb, "adb:addressbookType").txt("company");
             const identity = header.ele(NS.adb, "adb:identity");
             const typAddr = identity.ele(NS.typ, "typ:address");
             if (params.name) typAddr.ele(NS.typ, "typ:name").txt(params.name);

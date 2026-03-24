@@ -37,8 +37,9 @@ export function registerEnquiryTools(server: McpServer, client: PohodaClient): v
           "lst:listEnquiryRequest",
           NS.lst,
           "lst:requestEnquiry",
-          (req) => {
-            if (params.enquiryType) req.att("enquiryType", params.enquiryType);
+          (req, listReq) => {
+            listReq.att("enquiryVersion", "2.0");
+            if (params.enquiryType) listReq.att("enquiryType", params.enquiryType);
             const filterParams: ListFilterParams = {
               id: params.id,
               dateFrom: params.dateFrom,

@@ -19,7 +19,7 @@ const orderItemSchema = z.object({
   code: z.string().optional(),
 });
 
-function applyOrderFilter(parent: XMLBuilder, params: ListFilterParams & { numberOrder?: string }): void {
+function applyOrderFilter(parent: XMLBuilder, params: ListFilterParams): void {
   const hasAny = Object.values(params).some((v) => v != null && v !== "");
   if (!hasAny) return;
 
@@ -27,8 +27,7 @@ function applyOrderFilter(parent: XMLBuilder, params: ListFilterParams & { numbe
   if (params.id != null) ftr.ele(NS.ftr, "ftr:id").txt(String(params.id));
   if (params.dateFrom) ftr.ele(NS.ftr, "ftr:dateFrom").txt(toIsoDate(params.dateFrom));
   if (params.dateTill) ftr.ele(NS.ftr, "ftr:dateTill").txt(toIsoDate(params.dateTill));
-  if (params.companyName) ftr.ele(NS.ftr, "ftr:selectedCompany").txt(params.companyName);
-  if (params.numberOrder) ftr.ele(NS.ftr, "ftr:selectedNumberOrder").txt(params.numberOrder);
+  if (params.companyName) ftr.ele(NS.ftr, "ftr:selectedCompanys").ele(NS.ftr, "ftr:company").txt(params.companyName);
   if (params.lastChanges) ftr.ele(NS.ftr, "ftr:lastChanges").txt(toIsoDate(params.lastChanges));
 }
 
@@ -42,7 +41,6 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
       dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
       dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
       companyName: z.string().optional().describe("Filter by company name"),
-      numberOrder: z.string().optional().describe("Filter by order number"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
     async (params) => {
@@ -52,14 +50,14 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
           "lst:listOrderRequest",
           NS.lst,
           "lst:requestOrder",
-          (req) => {
-            if (params.orderType) req.att("orderType", params.orderType);
+          (req, listReq) => {
+            listReq.att("orderVersion", "2.0");
+            if (params.orderType) listReq.att("orderType", params.orderType);
             applyOrderFilter(req, {
               id: params.id,
               dateFrom: params.dateFrom,
               dateTill: params.dateTill,
               companyName: params.companyName,
-              numberOrder: params.numberOrder,
               lastChanges: params.lastChanges,
             });
           }

@@ -23,7 +23,10 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
           "lst:listAccountancyRequest",
           NS.lst,
           "lst:requestAccountancy",
-          (req) => applyFilter(req, params)
+          (req, listReq) => {
+            listReq.att("accountancyVersion", "2.0");
+            applyFilter(req, params);
+          }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -49,7 +52,10 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
           "lst:listBalanceRequest",
           NS.lst,
           "lst:requestBalance",
-          (req) => applyFilter(req, params)
+          (req, listReq) => {
+            listReq.att("balanceVersion", "2.0");
+            applyFilter(req, params);
+          }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -75,7 +81,10 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
           "lst:listMovementRequest",
           NS.lst,
           "lst:requestMovement",
-          (req) => applyFilter(req, params)
+          (req, listReq) => {
+            listReq.att("movementVersion", "2.0");
+            applyFilter(req, params);
+          }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -101,7 +110,10 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
           "lst:listClassificationVATRequest",
           NS.lst,
           "lst:requestClassificationVAT",
-          (req) => applyFilter(req, params)
+          (req, listReq) => {
+            listReq.att("classificationVATVersion", "2.0");
+            applyFilter(req, params);
+          }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);

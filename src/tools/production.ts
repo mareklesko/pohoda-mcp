@@ -25,7 +25,10 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
           "lst:listVyrobaRequest",
           NS.lst,
           "lst:requestVyroba",
-          (req) => applyFilter(req, params),
+          (req, listReq) => {
+            listReq.att("vyrobaVersion", "2.0");
+            applyFilter(req, params);
+          },
         );
         const resp = parseResponse(await client.sendXml(xml));
         const data = extractListData(resp);
@@ -44,12 +47,10 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
       text: z.string().optional().describe("Description"),
       note: z.string().optional(),
       items: z.array(z.object({
-        text: z.string(),
-        quantity: z.number(),
-        unitPrice: z.number(),
-        unit: z.string().optional(),
-        stockCode: z.string().optional(),
-      })).optional().describe("Production items"),
+        stockCode: z.string().describe("Stock item code (required to identify the item being produced)"),
+        quantity: z.number().optional().describe("Quantity"),
+        note: z.string().optional().describe("Item note"),
+      })).optional().describe("Production items (each references a stock item)"),
     },
     async (params) => {
       try {
@@ -64,13 +65,9 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
             const det = doc.ele(NS.vyr, "vyr:vyrobaDetail");
             for (const i of params.items) {
               const li = det.ele(NS.vyr, "vyr:vyrobaItem");
-              li.ele(NS.vyr, "vyr:text").txt(i.text);
-              li.ele(NS.vyr, "vyr:quantity").txt(String(i.quantity));
-              if (i.unit) li.ele(NS.vyr, "vyr:unit").txt(i.unit);
-              li.ele(NS.vyr, "vyr:homeCurrency").ele(NS.typ, "typ:unitPrice").txt(String(i.unitPrice));
-              if (i.stockCode) {
-                li.ele(NS.vyr, "vyr:stockItem").ele(NS.typ, "typ:stockItem").ele(NS.typ, "typ:ids").txt(i.stockCode);
-              }
+              if (i.quantity != null) li.ele(NS.vyr, "vyr:quantity").txt(String(i.quantity));
+              li.ele(NS.vyr, "vyr:stockItem").ele(NS.typ, "typ:stockItem").ele(NS.typ, "typ:ids").txt(i.stockCode);
+              if (i.note) li.ele(NS.vyr, "vyr:note").txt(i.note);
             }
           }
         });
@@ -101,7 +98,10 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
           "lst:listServiceRequest",
           NS.lst,
           "lst:requestService",
-          (req) => applyFilter(req, params),
+          (req, listReq) => {
+            listReq.att("serviceVersion", "2.0");
+            applyFilter(req, params);
+          },
         );
         const resp = parseResponse(await client.sendXml(xml));
         const data = extractListData(resp);
@@ -116,23 +116,29 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
     "pohoda_create_service",
     "Create a service record in POHODA",
     {
-      date: z.string().describe("Service date"),
+      serviceType: z.enum(["postWarranty", "warranty"]).describe("Service type: postWarranty or warranty (required)"),
+      received: z.string().optional().describe("Date of receipt into service (DD.MM.YYYY or YYYY-MM-DD)"),
       text: z.string().optional().describe("Description"),
       partnerName: z.string().optional(),
       note: z.string().optional(),
+      subjectText: z.string().optional().describe("Subject of service (description of the serviced item)"),
     },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const doc = item.ele(NS.ser, "ser:service").att("version", "2.0");
           const hdr = doc.ele(NS.ser, "ser:serviceHeader");
-          hdr.ele(NS.ser, "ser:date").txt(toIsoDate(params.date));
+          hdr.ele(NS.ser, "ser:serviceType").txt(params.serviceType);
+          if (params.received) hdr.ele(NS.ser, "ser:received").txt(toIsoDate(params.received));
           if (params.text) hdr.ele(NS.ser, "ser:text").txt(params.text);
           if (params.partnerName) {
             const pi = hdr.ele(NS.ser, "ser:partnerIdentity");
             pi.ele(NS.typ, "typ:address").ele(NS.typ, "typ:name").txt(params.partnerName);
           }
           if (params.note) hdr.ele(NS.ser, "ser:note").txt(params.note);
+          const subj = doc.ele(NS.ser, "ser:serviceSubject");
+          const subject = subj.ele(NS.ser, "ser:subject");
+          if (params.subjectText) subject.ele(NS.ser, "ser:text").txt(params.subjectText);
         });
         const resp = parseResponse(await client.sendXml(xml));
         const result = extractImportResult(resp);
