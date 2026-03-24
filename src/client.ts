@@ -71,10 +71,11 @@ export class PohodaClient {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
         const rawBuf = Buffer.from(await resp.arrayBuffer());
-        const encoding = resp.headers.get("content-encoding");
-        const dataBuf =
-          encoding === "gzip" ? gunzipSync(rawBuf) :
-          encoding === "deflate" ? safeInflate(rawBuf) :
+        // Node.js fetch (undici) auto-decompresses responses but may retain the
+        // Content-Encoding header, so we detect compression via magic bytes instead
+        // of trusting the header to avoid double-decompression ("incorrect header check").
+        const dataBuf = isGzip(rawBuf) ? gunzipSync(rawBuf) :
+          isDeflate(rawBuf) ? safeInflate(rawBuf) :
           rawBuf;
 
         const contentType = resp.headers.get("content-type") ?? "";
@@ -141,4 +142,13 @@ function sleep(ms: number): Promise<void> {
 
 function safeInflate(buf: Buffer): Buffer {
   try { return inflateSync(buf); } catch { return inflateRawSync(buf); }
+}
+
+function isGzip(buf: Buffer): boolean {
+  return buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b;
+}
+
+function isDeflate(buf: Buffer): boolean {
+  // zlib header: first byte 0x78, second byte one of 0x01, 0x9c, 0xda, 0x5e
+  return buf.length >= 2 && buf[0] === 0x78 && (buf[1] === 0x01 || buf[1] === 0x9c || buf[1] === 0xda || buf[1] === 0x5e);
 }
