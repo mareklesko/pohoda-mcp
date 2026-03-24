@@ -15,13 +15,17 @@ export interface DataPackOptions {
 }
 
 export function createDataPack(opts: DataPackOptions): XMLBuilder {
-  return create({ version: "1.0", encoding: "Windows-1250" })
+  const dp = create({ version: "1.0", encoding: "Windows-1250" })
     .ele(NS.dat, "dat:dataPack")
     .att("id", nextId("dp"))
     .att("ico", opts.ico)
     .att("application", POHODA_APP_NAME)
     .att("version", POHODA_VERSION)
     .att("note", opts.note ?? "MCP request");
+  for (const [prefix, uri] of Object.entries(NS)) {
+    dp.att(`xmlns:${prefix}`, uri);
+  }
+  return dp;
 }
 
 export function addDataPackItem(dataPack: XMLBuilder): XMLBuilder {
