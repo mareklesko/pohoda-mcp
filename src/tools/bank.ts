@@ -35,7 +35,10 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
           "lst:listBankRequest",
           NS.lst,
           "lst:requestBank",
-          (req) => applyFilter(req, params)
+          (req, listReq) => {
+            listReq.att("bankVersion", "2.0");
+            applyFilter(req, params);
+          }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -49,13 +52,12 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
 
   server.tool(
     "pohoda_create_bank",
-    "Create a bank document (receipt or expense) in POHODA. Requires bankType and date. Optional: text, account, bankCode, symbols, partner details, note, and line items.",
+    "Create a bank document (receipt or expense) in POHODA. Requires bankType and date. Optional: text, account, symbols, partner details, note, and line items.",
     {
       bankType: bankTypeEnum.describe("Bank document type: receipt or expense (required)"),
       date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
       text: z.string().optional().describe("Document text/description"),
       account: z.string().optional().describe("Bank account identifier"),
-      bankCode: z.string().optional().describe("Bank code"),
       symVar: z.string().optional().describe("Variable symbol"),
       symConst: z.string().optional().describe("Constant symbol"),
       symSpec: z.string().optional().describe("Specific symbol"),
@@ -80,8 +82,7 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
           if (params.account) {
             header.ele(NS.bnk, "bnk:account").ele(NS.typ, "typ:ids").txt(params.account);
           }
-          if (params.bankCode) header.ele(NS.bnk, "bnk:bankCode").txt(params.bankCode);
-          header.ele(NS.bnk, "bnk:date").txt(toIsoDate(params.date));
+          header.ele(NS.bnk, "bnk:datePayment").txt(toIsoDate(params.date));
           if (params.text) header.ele(NS.bnk, "bnk:text").txt(params.text);
           if (params.symVar) header.ele(NS.bnk, "bnk:symVar").txt(params.symVar);
           if (params.symConst) header.ele(NS.bnk, "bnk:symConst").txt(params.symConst);

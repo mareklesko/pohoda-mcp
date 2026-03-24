@@ -36,13 +36,13 @@ export function buildExportRequest(
   listTag: string,
   listNs: string,
   requestTag: string,
-  filterContent?: (req: XMLBuilder) => void,
+  filterContent?: (req: XMLBuilder, listReq: XMLBuilder) => void,
 ): string {
   const dp = createDataPack(opts);
   const item = addDataPackItem(dp);
   const listReq = item.ele(listNs, listTag).att("version", POHODA_VERSION);
   const req = listReq.ele(listNs, requestTag);
-  if (filterContent) filterContent(req);
+  if (filterContent) filterContent(req, listReq);
   return dp.end({ prettyPrint: false });
 }
 

@@ -32,7 +32,10 @@ export function registerInternalDocTools(server: McpServer, client: PohodaClient
           "lst:listIntDocRequest",
           NS.lst,
           "lst:requestIntDoc",
-          (req) => applyFilter(req, params)
+          (req, listReq) => {
+            listReq.att("intDocVersion", "2.0");
+            applyFilter(req, params);
+          }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);

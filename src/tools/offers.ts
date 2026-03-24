@@ -37,8 +37,9 @@ export function registerOfferTools(server: McpServer, client: PohodaClient): voi
           "lst:listOfferRequest",
           NS.lst,
           "lst:requestOffer",
-          (req) => {
-            if (params.offerType) req.att("offerType", params.offerType);
+          (req, listReq) => {
+            listReq.att("offerVersion", "2.0");
+            if (params.offerType) listReq.att("offerType", params.offerType);
             const filterParams: ListFilterParams = {
               id: params.id,
               dateFrom: params.dateFrom,
