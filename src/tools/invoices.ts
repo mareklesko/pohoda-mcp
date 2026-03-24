@@ -52,6 +52,7 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
             if (params.invoiceType) req.att("invoiceType", params.invoiceType);
             const filterParams: InvoiceFilterParams = {
               id: params.id,
+              invoiceType: params.invoiceType,
               dateFrom: params.dateFrom,
               dateTill: params.dateTill,
               variableSymbol: params.variableSymbol,
