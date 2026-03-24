@@ -71,11 +71,21 @@ export class PohodaClient {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
         const rawBuf = Buffer.from(await resp.arrayBuffer());
-        const encoding = resp.headers.get("content-encoding");
-        const dataBuf =
-          encoding === "gzip" ? gunzipSync(rawBuf) :
-          encoding === "deflate" ? safeInflate(rawBuf) :
-          rawBuf;
+        const contentEncoding = resp.headers.get("content-encoding") ?? "";
+        // Node.js fetch (undici) auto-decompresses responses but may retain the
+        // Content-Encoding header, so we detect compression via magic bytes instead
+        // of trusting the header to avoid double-decompression ("incorrect header check").
+        let dataBuf: Buffer;
+        if (isGzip(rawBuf)) {
+          dataBuf = gunzipSync(rawBuf);
+        } else if (isDeflate(rawBuf)) {
+          dataBuf = safeInflate(rawBuf);
+        } else if (/\bdeflate\b/i.test(contentEncoding) && !looksLikeTextOrXml(rawBuf)) {
+          // Fallback for raw RFC1951 deflate streams without a fixed magic signature.
+          dataBuf = safeInflate(rawBuf);
+        } else {
+          dataBuf = rawBuf;
+        }
 
         const contentType = resp.headers.get("content-type") ?? "";
         if (contentType.includes("Windows-1250") || contentType.includes("windows-1250")) {
@@ -141,4 +151,37 @@ function sleep(ms: number): Promise<void> {
 
 function safeInflate(buf: Buffer): Buffer {
   try { return inflateSync(buf); } catch { return inflateRawSync(buf); }
+}
+
+function isGzip(buf: Buffer): boolean {
+  return buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b;
+}
+
+function isDeflate(buf: Buffer): boolean {
+  if (buf.length < 2) return false;
+  const cmf = buf[0];
+  const flg = buf[1];
+  // zlib header (RFC 1950): CM must be 8 (deflate) and (CMF << 8 | FLG) must be divisible by 31
+  if ((cmf & 0x0f) !== 8) return false;
+  return (((cmf << 8) | flg) % 31) === 0;
+}
+
+function looksLikeTextOrXml(buf: Buffer): boolean {
+  const sample = buf.subarray(0, 512).toString("utf-8");
+  const trimmed = sample.trimStart();
+  if (!trimmed) return false;
+  if (/^<\?xml/i.test(trimmed)) return true;
+  if (trimmed[0] === "<" || trimmed[0] === "{" || trimmed[0] === "[") return true;
+  let printable = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    const code = trimmed.charCodeAt(i);
+    if (
+      code === 9 || code === 10 || code === 13 ||
+      (code >= 32 && code <= 126) ||
+      code > 127
+    ) {
+      printable++;
+    }
+  }
+  return printable > 0 && printable / trimmed.length > 0.9;
 }
