@@ -1,6 +1,12 @@
 import { gunzipSync, inflateSync, inflateRawSync } from "node:zlib";
 import * as path from "node:path";
-import iconv from "iconv-lite";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const iconv = require("iconv-lite") as {
+  encode: (str: string, encoding: string) => Buffer;
+  decode: (buf: Buffer, encoding: string) => string;
+};
 
 export interface PohodaClientConfig {
   url: string;
