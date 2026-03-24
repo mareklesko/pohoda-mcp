@@ -1,6 +1,6 @@
 import { gunzipSync, inflateSync } from "node:zlib";
 import * as path from "node:path";
-import * as iconv from "iconv-lite";
+import iconv from "iconv-lite";
 
 export interface PohodaClientConfig {
   url: string;
